@@ -17,10 +17,10 @@ class BookController extends Controller
 
         $books = Book::when(
             $title,
-        fn($query,$title) => $query->title($title)
+            fn ($query, $title) => $query->title($title)
         );
 
-        $books = match($filter){
+        $books = match($filter) {
             'popular_last_month' => $books->popularLastMonth(),
             'popular_last_6months' => $books->popularLast6Months(),
             'highest_rated_last_month' => $books->highestRatedLastMonth(),
@@ -28,10 +28,11 @@ class BookController extends Controller
             default => $books->latest()->withReviewCount()->withAvgRating(),
         };
 
-        $cacheKey = md5('book:'. $filter.':'.$title);
-        $books = cache()->remember($cacheKey,3600,fn() => $books->get());
+        $page = $request->input('page', 1);
+        $cacheKey = md5('book:'. $filter . ':' . $title . ':page:' . $page);
+        $books = cache()->remember($cacheKey, 3600, fn () => $books->paginate(10));
 
-            return view("books.index", ['books' => $books]);
+        return view("books.index", ['books' => $books]);
     }
 
     /**
@@ -56,11 +57,23 @@ class BookController extends Controller
     public function show(int $id)
     {
         $cacheKey = md5('book:'.$id);
-        $book = cache()->remember($cacheKey, 3600, fn() => Book::with([
-            'reviews' => fn($query) => $query->latest()
-        ])
-        ->withReviewCount()->withAvgRating()->findOrFail($id));
-        return view('books.show', ['book' => $book]);
+        // Cache the book details without reviews
+        $book = cache()->remember(
+            $cacheKey,
+            3600,
+            fn () =>
+        Book::withReviewCount()
+            ->withAvgRating()
+            ->findOrFail($id)
+        );
+
+        // Paginate the reviews separately
+        $reviews = $book->reviews()->latest()->paginate(10);
+
+        return view('books.show', [
+            'book' => $book,
+            'reviews' => $reviews
+        ]);
     }
 
     /**

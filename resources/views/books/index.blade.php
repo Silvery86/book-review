@@ -23,7 +23,7 @@
                         ];
                     @endphp
                     @foreach ($filters as $key => $value)
-                        <a href="{{ route('books.index', [...request()->query() ,'filter' => $key]) }}"
+                        <a href="{{ route('books.index', [...request()->query() ,'filter' => $key , 'page' => 1]) }}"
                             class="{{ request('filter') === $key || (request('filter') === null && $key === '') ? 'filter-item-active' : 'filter-item' }}">{{ $value }}</a>
                     @endforeach
                 </div>
@@ -41,6 +41,7 @@
                                     <div>
                                         <div class="book-rating">
                                             {{ number_format($book->reviews_avg_rating, 1) }}
+                                            <x-star-rating :rating="$book->reviews_avg_rating" />
                                         </div>
                                         <div class="book-review-count">
                                             out of {{ $book->reviews_count }}
@@ -59,6 +60,9 @@
                         </li>
                     @endforelse
                 </ul>
+                <div class="mt-4">
+                    <x-pagination-links :paginator="$books" />
+                </div>
             </div>
         </div>
     </div>
